@@ -1,0 +1,119 @@
+<html>
+
+<head>
+    <style>
+        #chartArea>div{
+            padding-top:100px;
+            height:300px;
+            width:45%;
+            display: inline-block;
+        }    
+    </style>
+</head>
+
+<body>
+    <select id="select" name="months">
+        <option value="Jan">January</option>
+        <option value="Feb">Febuary</option>
+        <option value="Mar">March</option>
+        <option value="Apr">April</option>
+    </select>
+    <button id="retention">Get Retention</button>
+    <button id="division">Get Division</button>
+    <button id="getBoth">Get Both</button>
+    <div id="chartArea">
+        <div id="pieChart"><svg></svg><div id="pieData"></div></div>
+        <div id="barChartArea"><div id="barChart"></div><div id="barData"></div></div>
+    </div>
+</body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/4.13.0/d3.js"></script>
+<script src="https://code.highcharts.com/highcharts.js"></script>
+<script>
+    var retention = document.getElementById("retention");
+    var division = document.getElementById("division");
+    var getBoth = document.getElementById("getBoth");
+    var yourSelect = document.getElementById('select');
+    var barData=document.getElementById('barData');
+    var pieData=document.getElementById('pieData');
+    var chartArea = document.getElementById('pieChart');
+    
+    division.addEventListener('click', getDivision);
+    retention.addEventListener('click', getRetention);
+    getBoth.addEventListener('click',callBoth);
+    
+    function callBoth(){
+        getRetention();
+        getDivision();
+    }
+    function getRetention(params) {
+        var option = yourSelect.value;
+        fetch('http://localhost:3000/Retention/' + option).then(data => data.json()).then(data => {console.log(data); buildBarChart(data);});
+    }
+    function getDivision(params) {
+        var option = yourSelect.value;
+        fetch('http://localhost:3000/Division/' + option).then(data => data.json()).then(data => { console.log(data); buildPIEChart(data) });
+    }
+    function buildPIEChart(data) {
+        chartArea.innerHTML = "<svg></svg><div id='pieData'></div>";
+        pieData = document.getElementById('pieData');
+        pieData.innerHTML=JSON.stringify(data);
+        
+        var width = 300;
+        var height = 300;
+
+        var continents = [];
+        var labels = ['Disruptor', 'Liberator', 'GameChanger'];
+
+        data = labels.map(x => { return { labels: x, value: data[x] } });
+        var colorScale = d3.scaleOrdinal()
+            .domain(labels)
+            .range(d3.schemeCategory10);
+
+        d3.select('svg')
+            .attr('width', width)
+            .attr('height', height)
+            .append('g')
+            .attr('transform', 'translate(' + width / 2 + ',' + height / 2 + ')')
+            .classed('chart', true);
+
+
+        var arcs = d3.pie().value(d => d.value)(data);
+
+        var path = d3.arc()
+            .outerRadius(width / 2 - 10)
+            //.padAngle(0.02)
+            .innerRadius(width / 4);
+
+        d3.select('.chart')
+            .selectAll('.arc')
+            .data(arcs)
+            .enter()
+            .append('path')
+            .classed('arc', true)
+            .attr('fill', d => colorScale(d.data.labels))
+            .attr('stroke', 'black')
+            .attr('d', path);
+    }
+    function buildBarChart(dataset) {
+        barData.innerHTML = JSON.stringify(dataset);
+        var labels = ["Gain", "Lost", "Retain"];
+        var dataset = labels.map(x => { return { name: x, data:[dataset[x]] } });
+        Highcharts.chart('barChart', {
+            chart: {
+                type: 'column'
+            },
+            title: {
+                text: 'Column chart with negative values'
+            },
+            xAxis: {
+                categories: []
+            },
+            credits: {
+                enabled: false
+            },
+            series: dataset
+        });
+    }
+</script>
+
+</html>
